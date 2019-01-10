@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<http:listener-config name="HTTP_Listener_Configuration"
+		host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration" connectionIdleTimeout="400000"/>
+	<http:request-config name="HTTP_Request_Configuration"
+		protocol="HTTPS" host="anypoint.mulesoft.com" port="443"
+		doc:name="HTTP Request Configuration" connectionIdleTimeout="400000">
+		<http:basic-authentication username="swtamella"
+			password="Chaitanya@1" preemptive="true" />
+	</http:request-config>
+	<flow name="applicationlistsFlow">
+		<http:listener config-ref="HTTP_Listener_Configuration"
+			path="/" doc:name="HTTP" allowedMethods="GET" />
+        <set-payload value="{  &quot;username&quot;:&quot;swtamella&quot;,    &quot;password&quot;:&quot;Chaitanya@1&quot;   } " mimeType="application/json" doc:name="Set Payload"/>
+		<http:request config-ref="HTTP_Request_Configuration"
+			path="accounts/login" method="POST" doc:name="HTTPS" />
+        <dw:transform-message doc:name="Access token" metadata:id="de1f740e-f310-4781-a665-0708b8b7968e">
+            <dw:input-payload mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	access_token: payload.access_token
+}]]></dw:set-payload>
+            <dw:set-variable variableName="accesstoken"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	access_token: payload.access_token
+}]]></dw:set-variable>
+        </dw:transform-message>
+        <flow-ref name="OrganisationInfo" doc:name="OrganisationInfo"/>
+        <flow-ref name="EnvironmentInfo" doc:name="EnvironmentInfo"/>
+        <expression-component doc:name="Expression"><![CDATA[flowVars.deploymentDetails = new java.util.ArrayList();]]></expression-component>
+
+        <foreach doc:name="For Each" collection="#[payload.Applications]">
+            <flow-ref name="applicationlogsummaryflow" doc:name="applicationlogsummaryflow"/>
+        </foreach>
+        <set-payload value="#[flowVars['deploymentDetails']]" doc:name="Set Payload"/>
+        <flow-ref name="Logfileflow" doc:name="Logfileflow"/>
+        <logger level="INFO" doc:name="Logger"/>
+
+
+
+
+
+
+
+
+	</flow>
+    <flow name="OrganisationInfo">
+        <http:request config-ref="HTTP_Request_Configuration" path="accounts/api/me" method="GET" doc:name="HTTPS">
+            <http:request-builder>
+                <http:header headerName="accesstoken" value="#[payload.access_token]"/>
+            </http:request-builder>
+        </http:request>
+        <dw:transform-message doc:name="Organisation information" metadata:id="b63c3e1c-976d-43d5-b186-9e344f9c1ee6">
+            <dw:input-payload doc:sample="C:\Users\ppoudel\Desktop\orgapiresp.json" mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	organizationId: payload.user.organizationId,
+	name: payload.user.organization.name,
+	entitlements: {
+		vCoresProduction: {
+			assigned: payload.user.organization.entitlements.vCoresProduction.assigned,
+			reassigned: payload.user.organization.entitlements.vCoresProduction.reassigned
+		},
+		vCoresSandbox: {
+			assigned: payload.user.organization.entitlements.vCoresSandbox.assigned,
+			reassigned: payload.user.organization.entitlements.vCoresSandbox.reassigned
+		},
+		vCoresDesign: {
+			assigned: payload.user.organization.entitlements.vCoresDesign.assigned,
+			reassigned: payload.user.organization.entitlements.vCoresDesign.reassigned
+		},
+		staticIps: {
+			assigned: payload.user.organization.entitlements.staticIps.assigned,
+			reassigned: payload.user.organization.entitlements.staticIps.reassigned
+		},
+		vpcs: {
+			assigned: payload.user.organization.entitlements.vpcs.assigned,
+			reassigned: payload.user.organization.entitlements.vpcs.reassigned
+		},
+		vpns: {
+			assigned: payload.user.organization.entitlements.vpns.assigned,
+			reassigned: payload.user.organization.entitlements.vpns.reassigned
+		},
+		workerLoggingOverride: {
+			enabled: payload.user.organization.entitlements.workerLoggingOverride.enabled
+		},
+		mqMessages: {
+			base: payload.user.organization.entitlements.mqMessages.base,
+			addOn: payload.user.organization.entitlements.mqMessages.addOn
+		},
+		mqRequests: {
+			base: payload.user.organization.entitlements.mqRequests.base,
+			addOn: payload.user.organization.entitlements.mqRequests.addOn
+		},
+		objectStoreRequestUnits: {
+			base: payload.user.organization.entitlements.objectStoreRequestUnits.base,
+			addOn: payload.user.organization.entitlements.objectStoreRequestUnits.addOn
+		},
+		objectStoreKeys: {
+			base: payload.user.organization.entitlements.objectStoreKeys.base,
+			addOn: payload.user.organization.entitlements.objectStoreKeys.addOn
+		},
+		mqAdvancedFeatures: {
+			enabled: payload.user.organization.entitlements.mqAdvancedFeatures.enabled
+		},
+		gateways: {
+			assigned: payload.user.organization.entitlements.gateways.assigned
+		},
+		designCenter: {
+			mozart: payload.user.organization.entitlements.designCenter.mozart,
+			api: payload.user.organization.entitlements.designCenter.api,
+			apiVisual: payload.user.organization.entitlements.designCenter.apiVisual,
+			apiExample: payload.user.organization.entitlements.designCenter.apiExample
+		},
+		partnersProduction: {
+			assigned: payload.user.organization.entitlements.partnersProduction.assigned
+		},
+		partnersSandbox: {
+			assigned: payload.user.organization.entitlements.partnersSandbox.assigned
+		},
+		externalIdentity: payload.user.organization.entitlements.externalIdentity,
+		autoscaling: payload.user.organization.entitlements.autoscaling,
+		armAlerts: payload.user.organization.entitlements.armAlerts,
+		apis: {
+			enabled: payload.user.organization.entitlements.apis.enabled
+		},
+		apiMonitoring: {
+			schedules: payload.user.organization.entitlements.apiMonitoring.schedules
+		},
+		monitoringCenter: {
+			productSKU: payload.user.organization.entitlements.monitoringCenter.productSKU
+		},
+		crowd: {
+			hideApiManagerDesigner: payload.user.organization.entitlements.crowd.hideApiManagerDesigner,
+			hideFormerApiPlatform: payload.user.organization.entitlements.crowd.hideFormerApiPlatform,
+			environments: payload.user.organization.entitlements.crowd.environments
+		},
+		cam: {
+			enabled: payload.user.organization.entitlements.cam.enabled
+		},
+		exchange2: {
+			enabled: payload.user.organization.entitlements.exchange2.enabled
+		},
+		crowdSelfServiceMigration: {
+			enabled: payload.user.organization.entitlements.crowdSelfServiceMigration.enabled
+		},
+		kpiDashboard: {
+			enabled: payload.user.organization.entitlements.kpiDashboard.enabled
+		},
+		pcf: payload.user.organization.entitlements.pcf,
+		appViz: payload.user.organization.entitlements.appViz,
+		runtimeFabric: payload.user.organization.entitlements.runtimeFabric,
+		anypointSecurityTokenization: {
+			enabled: payload.user.organization.entitlements.anypointSecurityTokenization.enabled
+		},
+		anypointSecurityEdgePolicies: {
+			enabled: payload.user.organization.entitlements.anypointSecurityEdgePolicies.enabled
+		},
+		messaging: {
+			assigned: payload.user.organization.entitlements.messaging.assigned
+		},
+		workerClouds: {
+			assigned: payload.user.organization.entitlements.workerClouds.assigned,
+			reassigned: payload.user.organization.entitlements.workerClouds.reassigned
+		}
+	}
+}]]></dw:set-payload>
+            <dw:set-variable variableName="organizationId"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	organnizationId : payload.user.organizationId
+}]]></dw:set-variable>
+            <dw:set-variable variableName="OrgInfo"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	title : payload.user.organization.name,
+	entitlement: {
+		vCoresProduction: {
+			assigned: payload.user.organization.entitlements.vCoresProduction.assigned,
+			reassigned: payload.user.organization.entitlements.vCoresProduction.reassigned
+		},
+		vCoresSandbox: {
+			assigned: payload.user.organization.entitlements.vCoresSandbox.assigned,
+			reassigned: payload.user.organization.entitlements.vCoresSandbox.reassigned
+		},
+		vCoresDesign: {
+			assigned: payload.user.organization.entitlements.vCoresDesign.assigned,
+			reassigned: payload.user.organization.entitlements.vCoresDesign.reassigned
+		},
+		staticIps: {
+			assigned: payload.user.organization.entitlements.staticIps.assigned,
+			reassigned: payload.user.organization.entitlements.staticIps.reassigned
+		},
+		vpcs: {
+			assigned: payload.user.organization.entitlements.vpcs.assigned,
+			reassigned: payload.user.organization.entitlements.vpcs.reassigned
+		},
+		vpns: {
+			assigned: payload.user.organization.entitlements.vpns.assigned,
+			reassigned: payload.user.organization.entitlements.vpns.reassigned
+		},
+		workerLoggingOverride: {
+			enabled: payload.user.organization.entitlements.workerLoggingOverride.enabled
+		},
+		mqMessages: {
+			base: payload.user.organization.entitlements.mqMessages.base,
+			addOn: payload.user.organization.entitlements.mqMessages.addOn
+		},
+		mqRequests: {
+			base: payload.user.organization.entitlements.mqRequests.base,
+			addOn: payload.user.organization.entitlements.mqRequests.addOn
+		},
+		objectStoreRequestUnits: {
+			base: payload.user.organization.entitlements.objectStoreRequestUnits.base,
+			addOn: payload.user.organization.entitlements.objectStoreRequestUnits.addOn
+		},
+		objectStoreKeys: {
+			base: payload.user.organization.entitlements.objectStoreKeys.base,
+			addOn: payload.user.organization.entitlements.objectStoreKeys.addOn
+		},
+		mqAdvancedFeatures: {
+			enabled: payload.user.organization.entitlements.mqAdvancedFeatures.enabled
+		},
+		gateways: {
+			assigned: payload.user.organization.entitlements.gateways.assigned
+		},
+		designCenter: {
+			mozart: payload.user.organization.entitlements.designCenter.mozart,
+			api: payload.user.organization.entitlements.designCenter.api,
+			apiVisual: payload.user.organization.entitlements.designCenter.apiVisual,
+			apiExample: payload.user.organization.entitlements.designCenter.apiExample
+		},
+		partnersProduction: {
+			assigned: payload.user.organization.entitlements.partnersProduction.assigned
+		},
+		partnersSandbox: {
+			assigned: payload.user.organization.entitlements.partnersSandbox.assigned
+		},
+		externalIdentity: payload.user.organization.entitlements.externalIdentity,
+		autoscaling: payload.user.organization.entitlements.autoscaling,
+		armAlerts: payload.user.organization.entitlements.armAlerts,
+		apis: {
+			enabled: payload.user.organization.entitlements.apis.enabled
+		},
+		apiMonitoring: {
+			schedules: payload.user.organization.entitlements.apiMonitoring.schedules
+		},
+		monitoringCenter: {
+			productSKU: payload.user.organization.entitlements.monitoringCenter.productSKU
+		},
+		crowd: {
+			hideApiManagerDesigner: payload.user.organization.entitlements.crowd.hideApiManagerDesigner,
+			hideFormerApiPlatform: payload.user.organization.entitlements.crowd.hideFormerApiPlatform,
+			environments: payload.user.organization.entitlements.crowd.environments
+		},
+		cam: {
+			enabled: payload.user.organization.entitlements.cam.enabled
+		},
+		exchange2: {
+			enabled: payload.user.organization.entitlements.exchange2.enabled
+		},
+		crowdSelfServiceMigration: {
+			enabled: payload.user.organization.entitlements.crowdSelfServiceMigration.enabled
+		},
+		kpiDashboard: {
+			enabled: payload.user.organization.entitlements.kpiDashboard.enabled
+		},
+		pcf: payload.user.organization.entitlements.pcf,
+		appViz: payload.user.organization.entitlements.appViz,
+		runtimeFabric: payload.user.organization.entitlements.runtimeFabric,
+		anypointSecurityTokenization: {
+			enabled: payload.user.organization.entitlements.anypointSecurityTokenization.enabled
+		},
+		anypointSecurityEdgePolicies: {
+			enabled: payload.user.organization.entitlements.anypointSecurityEdgePolicies.enabled
+		},
+		messaging: {
+			assigned: payload.user.organization.entitlements.messaging.assigned
+		},
+		workerClouds: {
+			assigned: payload.user.organization.entitlements.workerClouds.assigned,
+			reassigned: payload.user.organization.entitlements.workerClouds.reassigned
+		}
+	}
+}]]></dw:set-variable>
+        </dw:transform-message>
+        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+    <flow name="EnvironmentInfo">
+        <http:request config-ref="HTTP_Request_Configuration" path="accounts/api/organizations/#[flowVars.organizationId.organnizationId]/environments" method="GET" doc:name="HTTPS"/>
+        <dw:transform-message doc:name="EnvironmentInformation" metadata:id="d3e19132-cd16-4a2c-a3aa-f8ffd80f553f">
+            <dw:input-payload doc:sample="C:\Users\ppoudel\Desktop\envcomp.json" mimeType="application/json"/>
+            <dw:input-variable doc:sample="sample_data\json_1.json" variableName="OrgInfo"/>
+            <dw:input-variable doc:sample="sample_data\json_2.json" variableName="organizationId"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+
+---
+payload map {
+        name: $.name,
+
+
+id: {
+	designId: payload.data.id[0],
+	sandboxId: payload.data.id[1],
+	testId: payload.data.id[2],
+	name: payload.data.name
+	
+}
+
+}
+	
+
+
+
+
+
+]]></dw:set-payload>
+            <dw:set-variable variableName="designId"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	designid: payload.data[0].id
+}]]></dw:set-variable>
+            <dw:set-variable variableName="sandboxId"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	sandboxid: payload.data[1].id
+}]]></dw:set-variable>
+            <dw:set-variable variableName="testId"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	testid: payload.data[2].id
+}]]></dw:set-variable>
+            <dw:set-variable variableName="env"><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	
+	name: payload.data.name
+}]]></dw:set-variable>
+        </dw:transform-message>
+        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+        <json:json-to-object-transformer doc:name="JSON to Object"/>
+        <object-to-string-transformer doc:name="Object to String"/>
+        <scatter-gather doc:name="Scatter-Gather">
+            <http:request config-ref="HTTP_Request_Configuration" path="cloudhub/api/applications" method="GET" doc:name="HTTPS_DESIGN">
+                <http:request-builder>
+                    <http:header headerName="x-anypnt-env-id" value="#[flowVars.designId.designid]"/>
+                </http:request-builder>
+            </http:request>
+            <http:request config-ref="HTTP_Request_Configuration" path="cloudhub/api/applications" method="GET" doc:name="HTTPS_SANDBOX">
+                <http:request-builder>
+                    <http:header headerName="x-anypnt-env-id" value="#[flowVars.sandboxId.sandboxid]"/>
+                </http:request-builder>
+            </http:request>
+            <http:request config-ref="HTTP_Request_Configuration" path="cloudhub/api/applications" method="GET" doc:name="HTTP_TEST">
+                <http:request-builder>
+                    <http:header headerName="x-anypnt-env-id" value="#[flowVars.testId.testid]"/>
+                </http:request-builder>
+            </http:request>
+        </scatter-gather>
+        <dw:transform-message doc:name="Transform Message" metadata:id="3a29cd78-4aec-4cda-b574-ca9459954f81">
+            <dw:input-payload doc:sample="C:\Users\ppoudel\Desktop\cloudhub1.json" mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	vcore:flowVars.OrgInfo.entitlement,
+Applications:(flatten payload) map ((payload01 , indexOfPayload01) -> {
+	id: payload01.id,
+	domain: payload01.domain,
+	fullDomain: payload01.fullDomain,
+	properties: payload01.properties,
+	propertiesOptions: payload01.propertiesOptions,
+	status: payload01.status,
+	workers: payload01.workers,
+	workerType: payload01.workerType,
+	filename: payload01.filename,
+	remainingWorkerCount: payload01.remainingWorkerCount,
+	muleVersion: payload01.muleVersion,
+	region: payload01.region,
+	staticIPsEnabled: payload01.staticIPsEnabled
+})
+
+}]]></dw:set-payload>
+            <dw:set-variable variableName="Domain"><![CDATA[%dw 1.0
+%output application/json
+---
+payload map {
+	domain: $.domain
+}
+
+]]></dw:set-variable>
+        </dw:transform-message>
+    </flow>
+    <flow name="applicationlogsummaryflow">
+               <logger message="#[payload.domain]" level="INFO" doc:name="Logger"/>
+            <http:request config-ref="HTTP_Request_Configuration" path="cloudhub/api/v2/applications/#[payload.domain]/deployments" method="GET" doc:name="HTTP">
+                <http:request-builder>
+                <http:header headerName="X-ANYPNT-ENV-ID" value="#[flowVars.testId.testid]"/>
+
+                </http:request-builder>
+            </http:request>
+            <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+            <dw:transform-message doc:name="Transform Message" metadata:id="9de5f1f5-d791-408b-a604-258c190df134">
+                <dw:input-payload doc:sample="sample_data\json_3.json" mimeType="application/json"/>
+                <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{ 
+	Domain:flowVars.Domain,
+data: payload.data map ((datum , indexOfDatum) -> {
+		deploymentId: datum.deploymentId,
+		createTime: datum.createTime,
+		startTime: datum.startTime,
+		endTime: datum.endTime,
+		instances: datum.instances map ((instance , indexOfInstance) -> {
+			instanceId: instance.instanceId,
+			publicIPAddress: instance.publicIPAddress,
+			status: instance.status,
+			region: instance.region
+		})
+	})
+}]]></dw:set-payload>
+
+
+            </dw:transform-message>
+        <expression-transformer doc:name="Expression" expression="#[flowVars['deploymentDetails'].add(payload)]"/>
+        <logger message="#[flowVars['deploymentDetails']]" level="INFO" doc:name="Logger"/>
+    </flow>
+    <sub-flow name="Logfileflow">
+        <http:request config-ref="HTTP_Request_Configuration" path="cloudhub/api/v2/applications/applicationlist/instances/5c29debfe872fd13e4dec853-0/log-file" method="GET" doc:name="HTTPS">
+            <http:request-builder>
+                <http:header headerName="X-ANYPNT-ENV-ID" value="#[flowVars.testId.testid]"/>
+            </http:request-builder>
+        </http:request>
+        <logger level="INFO" doc:name="Logger"/>
+        <file:outbound-endpoint path="C:\Users\swkondur\Documents" outputPattern="applicationlist_5c29debfe872fd13e4dec853-0" responseTimeout="10000" doc:name="File"/>
+    </sub-flow>
+
+
+
+
+</mule>

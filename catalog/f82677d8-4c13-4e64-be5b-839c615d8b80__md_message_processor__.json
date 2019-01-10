@@ -1,0 +1,16 @@
+{
+    "inputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "envcomp"
+        }
+    },
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "envreq"
+        }
+    },
+    "id": "f82677d8-4c13-4e64-be5b-839c615d8b80",
+    "version": "5.2.0.0"
+}

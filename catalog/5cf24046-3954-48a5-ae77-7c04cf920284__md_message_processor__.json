@@ -1,0 +1,16 @@
+{
+    "inputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "cloudhub1"
+        }
+    },
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "cloudhub2"
+        }
+    },
+    "id": "5cf24046-3954-48a5-ae77-7c04cf920284",
+    "version": "5.2.0.0"
+}

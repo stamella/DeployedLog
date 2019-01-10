@@ -1,0 +1,16 @@
+{
+    "inputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "accesstoken1"
+        }
+    },
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "accesstoken2"
+        }
+    },
+    "id": "de1f740e-f310-4781-a665-0708b8b7968e",
+    "version": "5.2.0.0"
+}
